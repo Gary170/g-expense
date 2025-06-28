@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>G-Expenses Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnH2N2znzZ4Fq6X4bCq9Zcv0y6S/YzhrAGoV+L8fU0bB1fv/6XRI3Zg+tdJYl+IE7ktPi66gQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 40px 0;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 1200px;
+      width: 95%;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .header .actions button {
+      background: none;
+      border: none;
+      font-size: 20px;
+      margin-left: 10px;
+      cursor: pointer;
+      color: #34495e;
+      transition: color 0.2s;
+    }
+    .header .actions button:hover {
+      color: #007bff;
+    }
+    .main {
+      display: flex;
+      gap: 30px;
+    }
+    .panel {
+      flex: 1;
+    }
+    h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .radio-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 5px;
+    }
+    button.primary {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 12px;
+      width: 100%;
+      margin-top: 20px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .summary-box {
+      background: #f0f3f8;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .summary-box h3 {
+      margin: 8px 0;
+    }
+    .summary-box span {
+      font-weight: 600;
+    }
+    .sales { color: #007bff; }
+    .expenses { color: #f39c12; }
+    .profit { color: #28a745; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+    }
+    .tabs button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      background: #e0e0e0;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background: #007bff;
+      color: white;
+    }
+    .transactions {
+      margin-top: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .transaction {
+      background: #eef3fb;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    canvas {
+      margin-top: 20px;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📘 G-Expenses Calculator</h1>
+    <div class="actions">
+      <button onclick="exportCSV()" title="Download CSV"><i class="fas fa-download"></i></button>
+      <button onclick="importCSV()" title="Upload CSV"><i class="fas fa-upload"></i></button>
+      <button onclick="confirmClear()" title="Delete All Data"><i class="fas fa-trash"></i></button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="panel">
+      <h2>Add New Transaction</h2>
+      <div class="radio-group">
+        <label><input type="radio" name="type" value="sale" checked> Sale</label>
+        <label><input type="radio" name="type" value="expense"> Expense</label>
+      </div>
+      <label>Date</label>
+      <input type="date" id="date"/>
+      <label>Description</label>
+      <input type="text" id="description" placeholder="Description" />
+      <label>Amount</label>
+      <input type="number" id="amount" placeholder="0.00" />
+      <label>Client Name</label>
+      <input type="text" id="client" placeholder="Client Name" />
+      <button class="primary" onclick="addTransaction()">Add Transaction</button>
+    </div>
+    <div class="panel">
+      <h2>Financial Summary</h2>
+      <div class="summary-box">
+        <h3>Total Sales: <span class="sales">₹<span id="total-sales">0.00</span></span></h3>
+        <h3>Total Expenses: <span class="expenses">₹<span id="total-expenses">0.00</span></span></h3>
+        <h3>Total Profit: <span class="profit">₹<span id="total-profit">0.00</span></span></h3>
+      </div>
+      <div class="tabs">
+        <button onclick="filterRange('daily')">Daily</button>
+        <button onclick="filterRange('weekly')">Weekly</button>
+        <button onclick="filterRange('monthly')">Monthly</button>
+        <button onclick="filterRange('yearly')">Yearly</button>
+      </div>
+      <div class="transactions" id="transaction-list"></div>
+    </div>
+  </div>
+  <canvas id="chart"></canvas>
+</div>
+<script>
+  let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+  let chart;
+
+  function updateSummary() {
+    let sales = 0, expenses = 0;
+    transactions.forEach(t => {
+      if (t.type === 'sale') sales += t.amount;
+      else expenses += t.amount;
+    });
+    document.getElementById('total-sales').textContent = sales.toFixed(2);
+    document.getElementById('total-expenses').textContent = expenses.toFixed(2);
+    document.getElementById('total-profit').textContent = (sales - expenses).toFixed(2);
+  }
+
+  function renderTransactions() {
+    const list = document.getElementById('transaction-list');
+    list.innerHTML = '';
+    transactions.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'transaction';
+      div.innerText = `${t.date} - ${t.type.toUpperCase()} - ₹${t.amount.toFixed(2)} - ${t.description} (${t.client})`;
+      list.appendChild(div);
+    });
+    drawChart();
+  }
+
+  function addTransaction() {
+    const type = document.querySelector('input[name="type"]:checked').value;
+    const date = document.getElementById('date').value;
+    const description = document.getElementById('description').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const client = document.getElementById('client').value;
+    if (!date || !description || isNaN(amount) || !client) return alert("Please fill in all fields.");
+    transactions.push({ type, date, description, amount, client });
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+    ['date','description','amount','client'].forEach(id => document.getElementById(id).value = '');
+    updateSummary();
+    renderTransactions();
+  }
+
+  function exportCSV() {
+    const csvRows = ["Date,Type,Description,Amount,Client"];
+    transactions.forEach(t => {
+      csvRows.push(`${t.date},${t.type},${t.description},${t.amount},${t.client}`);
+    });
+    const blob = new Blob([csvRows.join("\n")], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transactions.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function confirmClear() {
+    if (confirm("Are you sure you want to delete all data? This cannot be undone.")) {
+      localStorage.removeItem('transactions');
+      transactions = [];
+      updateSummary();
+      renderTransactions();
+    }
+  }
+
+  function filterRange(range) {
+    const now = new Date();
+    let filtered;
+    if (range === 'daily') {
+      filtered = transactions.filter(t => new Date(t.date).toDateString() === now.toDateString());
+    } else if (range === 'weekly') {
+      const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+      filtered = transactions.filter(t => new Date(t.date) >= weekAgo);
+    } else if (range === 'monthly') {
+      filtered = transactions.filter(t => new Date(t.date).getMonth() === now.getMonth());
+    } else {
+      filtered = transactions.filter(t => new Date(t.date).getFullYear() === now.getFullYear());
+    }
+    renderChart(filtered);
+  }
+
+  function drawChart() {
+    renderChart(transactions);
+  }
+
+  function renderChart(data) {
+    const ctx = document.getElementById('chart').getContext('2d');
+    const labels = data.map(t => t.date);
+    const salesData = data.map(t => t.type === 'sale' ? t.amount : 0);
+    const expenseData = data.map(t => t.type === 'expense' ? t.amount : 0);
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Sales', data: salesData, backgroundColor: 'rgba(0, 123, 255, 0.6)' },
+          { label: 'Expenses', data: expenseData, backgroundColor: 'rgba(243, 156, 18, 0.6)' }
+        ]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  updateSummary();
+  renderTransactions();
+</script>
+</body>
+</html>
