@@ -837,20 +837,6 @@
             displayTransactions();
         }
 
-        function toggleFilters() {
-            const filtersSection = document.getElementById('filtersSection');
-            filtersSection.classList.toggle('active');
-        }
-
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                transactions = [];
-                filteredTransactions = [];
-                localStorage.removeItem('gExpensesTransactions');
-                localStorage.removeItem('gExpensesCurrency');
-                updateDisplay();
-                showMessage('All data cleared successfully!');
-            }
         }
 
         function toggleFilters() {
@@ -902,4 +888,6 @@
 
             displayTransactions();
         }
-    
+    </script>
+</body>
+</html>
