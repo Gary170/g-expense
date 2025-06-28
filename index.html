@@ -446,6 +446,7 @@
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="header">
@@ -572,8 +573,7 @@
                 <div class="period-tab active" data-period="monthly">Monthly</div>
                 <div class="period-tab" data-period="yearly">Yearly</div>
             </div>
-
-            <div class="empty-message" id="chartMessage">Add a transaction to see your summary chart.</div>
+            <canvas id="summaryChart" height="100" style="max-width: 100%; margin-top: 20px;"></canvas>
         </div>
     </div>
 
@@ -630,6 +630,7 @@
         let filteredTransactions = [];
         let currentCurrency = 'INR';
         let activePeriod = 'monthly';
+        let summaryChart;
 
         const currencySymbols = {
             USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'C$', AUD: 'A$', CHF: 'Fr', CNY: '¥', INR: '₹', KRW: '₩',
@@ -792,6 +793,98 @@
             document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
             document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
         }
+
+        function updateChart() {
+    const labels = [];
+    const data = [];
+
+    const now = new Date();
+
+    const groupBy = {
+        daily: { count: 7, label: i => {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            return d.toISOString().split('T')[0];
+        }},
+        weekly: { count: 4, label: i => `Week ${4 - i}` },
+        monthly: { count: 6, label: i => {
+            const d = new Date(now);
+            d.setMonth(d.getMonth() - i);
+            return d.toLocaleString('default', { month: 'short', year: 'numeric' });
+        }},
+        yearly: { count: 5, label: i => `${now.getFullYear() - (4 - i)}` }
+    };
+
+    const config = groupBy[activePeriod];
+    if (!config) return;
+
+    for (let i = config.count - 1; i >= 0; i--) {
+        labels.push(config.label(i));
+        data.push(0);
+    }
+
+    transactions.forEach(t => {
+        const date = new Date(t.date);
+
+        labels.forEach((label, idx) => {
+            switch (activePeriod) {
+                case 'daily':
+                    if (t.date === label) data[idx] += t.type === 'income' ? t.amount : -t.amount;
+                    break;
+                case 'weekly':
+                    const diff = Math.floor((now - new Date(t.date)) / (1000 * 60 * 60 * 24));
+                    const week = Math.floor(diff / 7);
+                    if (week >= 0 && week < config.count) data[config.count - 1 - week] += t.type === 'income' ? t.amount : -t.amount;
+                    break;
+                case 'monthly':
+                    const txMonth = new Date(t.date).getMonth();
+                    const txYear = new Date(t.date).getFullYear();
+                    labels.forEach((lbl, i) => {
+                        const lblParts = lbl.split(' ');
+                        if (txMonth === new Date(lblParts[0] + ' 1').getMonth() && txYear === parseInt(lblParts[1])) {
+                            data[i] += t.type === 'income' ? t.amount : -t.amount;
+                        }
+                    });
+                    break;
+                case 'yearly':
+                    const txY = new Date(t.date).getFullYear();
+                    const lblIdx = labels.indexOf(String(txY));
+                    if (lblIdx !== -1) data[lblIdx] += t.type === 'income' ? t.amount : -t.amount;
+                    break;
+            }
+        });
+    });
+
+    if (summaryChart) summaryChart.destroy();
+
+    const ctx = document.getElementById('summaryChart').getContext('2d');
+    summaryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Profit',
+                data,
+                backgroundColor: data.map(val => val >= 0 ? '#48bb78' : '#e53e3e')
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function (value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 
         function displayTransactions() {
             const container = document.getElementById('transactionsList');
