@@ -840,11 +840,13 @@
                     const txMonth = new Date(t.date).getMonth();
                     const txYear = new Date(t.date).getFullYear();
                     labels.forEach((lbl, i) => {
-                        const lblParts = lbl.split(' ');
-                        if (txMonth === new Date(lblParts[0] + ' 1').getMonth() && txYear === parseInt(lblParts[1])) {
-                            data[i] += t.type === 'income' ? t.amount : -t.amount;
-                        }
-                    });
+    const [monthName, year] = lbl.split(' ');
+    const labelDate = new Date(`${monthName} 1, ${year}`);
+    if (txMonth === labelDate.getMonth() && txYear === labelDate.getFullYear()) {
+        data[i] += t.type === 'income' ? t.amount : -t.amount;
+    }
+});
+
                     break;
                 case 'yearly':
                     const txY = new Date(t.date).getFullYear();
