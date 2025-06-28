@@ -980,6 +980,77 @@
 
             displayTransactions();
         }
+        // ==== EXPORT & IMPORT ====
+
+// download current data as JSON file
+function exportData() {
+  const payload = {
+    transactions,
+    currency: currentCurrency
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'g-expenses-data.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// load data back in from a selected JSON file
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const { transactions: importedTx, currency } = JSON.parse(reader.result);
+      if (Array.isArray(importedTx)) {
+        transactions = importedTx;
+        filteredTransactions = [...transactions];
+      }
+      if (currency) {
+        currentCurrency = currency;
+        document.getElementById('currencySelect').value = currentCurrency;
+      }
+      saveToLocalStorage();
+      updateDisplay();
+      showMessage('Data imported successfully!');
+    } catch (e) {
+      console.error(e);
+      showMessage('Failed to import data.', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// clear all transactions (with confirmation)
+function clearAllData() {
+  if (!confirm('Are you sure you want to clear ALL data?')) return;
+  transactions = [];
+  filteredTransactions = [];
+  localStorage.removeItem('gExpensesTransactions');
+  localStorage.removeItem('gExpensesCurrency');
+  updateDisplay();
+  showMessage('All data cleared.');
+}
+
+// ==== FILTER HELPERS ====
+
+function clearFilters() {
+  // reset any filter inputs
+  document.getElementById('filterAmount').value = '';
+  document.getElementById('amountOperator').value = 'above';
+  document.getElementById('filterDate').value = '';
+  document.getElementById('dateOperator').value = 'after';
+  document.getElementById('sortBy').value = 'newest';
+  // restore full list
+  filteredTransactions = [...transactions];
+  updateDisplay();
+}
+
     </script>
 </body>
 </html>
